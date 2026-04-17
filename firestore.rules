@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: products
+    // Document ID: {productId}
+    // Fields:
+    //   - name: string (required)
+    //   - description: string
+    //   - category: string (required)
+    //   - price: number (required)
+    //   - stockQuantity: number (required)
+    //   - imageUrl: string
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - email: string (required)
+    //   - displayName: string
+    //   - role: string (required) - 'customer' or 'admin'
+    //   - address: string
+    //
+    // Collection: orders
+    // Document ID: {orderId}
+    // Fields:
+    //   - userId: string (required)
+    //   - items: list (required)
+    //   - status: string (required) - 'pending', 'processing', 'out-for-delivery', 'delivered', 'cancelled'
+    //   - totalAmount: number (required)
+    //   - createdAt: timestamp (required)
+    //   - deliveryAddress: string (required)
+    //   - tracking: map
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      let email = request.auth.token.email;
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (email == "RAHIL1191@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
+             data.price is number && data.price >= 0 && data.price < 10000 &&
+             data.stockQuantity is number && data.stockQuantity >= 0 && data.stockQuantity < 100000 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 2000)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 1000));
+    }
+
+    function isValidUser(data) {
+      return data.email is string && data.email.size() < 200 && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.role in ['customer', 'admin'] &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('address' in data) || (data.address is string && data.address.size() < 500));
+    }
+
+    function isValidOrder(data) {
+      return data.userId is string && data.userId.size() < 128 &&
+             data.items is list && data.items.size() > 0 && data.items.size() < 50 &&
+             data.status in ['pending', 'processing', 'out-for-delivery', 'delivered', 'cancelled'] &&
+             data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount < 100000 &&
+             data.createdAt is timestamp &&
+             data.deliveryAddress is string && data.deliveryAddress.size() > 0 && data.deliveryAddress.size() < 1000 &&
+             (!('tracking' in data) || (data.tracking is map && data.tracking.keys().hasOnly(['lat', 'lng', 'lastUpdated'])));
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /products/{productId} {
+      allow read: if true; // Products are publicly viewable
+      allow create, update: if isAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'customer' || isAdmin());
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role)) || isAdmin();
+    }
+
+    match /orders/{orderId} {
+      // Allow read if: 
+      // 1. User is the owner of the order
+      // 2. User is an admin
+      // 3. It is a guest order (allows tracking by ID)
+      allow read: if (isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin())) || 
+                     (resource.data.userId == 'guest');
+      
+      // Allow create if:
+      // 1. Authenticated user creating for themselves
+      // 2. Guest creating a guest order
+      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidOrder(request.resource.data)) ||
+                       (request.resource.data.userId == 'guest' && isValidOrder(request.resource.data));
+
+      allow update: if isAdmin() && isValidOrder(request.resource.data); // Only admin can update order status/tracking
+      
+      // Exception: Owner can cancel if pending
+      allow update: if (isOwner(resource.data.userId) && 
+                        resource.data.status == 'pending' && 
+                        request.resource.data.status == 'cancelled' &&
+                        isValidOrder(request.resource.data));
+    }
+  }
+}

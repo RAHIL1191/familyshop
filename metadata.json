@@ -1,0 +1,6 @@
+{
+  "name": "Family Store",
+  "description": "A mobile-first e-commerce app for Family Store, featuring guest checkout, real-time tracking, and automated order notifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

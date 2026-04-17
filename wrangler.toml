@@ -1,0 +1,10 @@
+name = "family-store"
+compatibility_date = "2024-04-01"
+pages_build_output_dir = "dist"
+
+[vars]
+# These should also be set in the Cloudflare Dashboard
+VITE_STORE_NAME = "Family Store"
+
+# Node compatibility for Resend/Backend if using Functions
+node_compat = true

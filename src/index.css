@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-primary: #1B4332;
+  --color-secondary: #2D6A4F;
+  --color-accent: #D8F3DC;
+  --color-bg: #F8F9FA;
+  --color-ink: #1B1B1B;
+  --color-border: #DEE2E6;
+  --color-warning: #E63946;
+  --color-success: #2A9D8F;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+}
+
+@layer components {
+  .density-card {
+    @apply bg-white border border-border rounded-lg p-4 shadow-sm;
+  }
+  
+  .density-title {
+    @apply text-[10px] font-bold uppercase tracking-wider text-neutral-500 mb-3;
+  }
+  
+  .density-btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-secondary transition-all text-center;
+  }
+
+  .density-table-th {
+    @apply text-left px-2 py-3 border-b border-border text-[10px] uppercase tracking-widest text-neutral-400 font-bold;
+  }
+
+  .density-table-td {
+    @apply px-2 py-3 border-b border-neutral-50 text-xs;
+  }
+
+  .price-tag {
+    @apply font-mono font-bold text-neutral-900;
+  }
+
+  /* Mobile First Centric Utilities */
+  .mobile-touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+
+  .mobile-safe-bottom {
+    @apply pb-[env(safe-area-inset-bottom)];
+  }
+
+  .tab-bar-item {
+    @apply flex flex-col items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-widest text-neutral-400;
+  }
+
+  .tab-bar-item.active {
+    @apply text-primary;
+  }
+}
