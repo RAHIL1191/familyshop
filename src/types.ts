@@ -49,3 +49,8 @@ export interface Order {
     lastUpdated: any;
   };
 }
+
+export interface StoreSettings {
+  showDeals: boolean;
+  dealsTitle: string;
+}

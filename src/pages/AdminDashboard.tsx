@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { Product, Order, OrderStatus } from '../types';
-import { LayoutGrid, Package, Plus, Trash2, Edit3, Save, X, Check, Truck, AlertCircle, User as UserIcon, Mail, Phone, MapPin, ShieldAlert, ShoppingBag, ArrowRight } from 'lucide-react';
+import { db, storage } from '../firebase';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Product, Order, OrderStatus, StoreSettings } from '../types';
+import { LayoutGrid, Package, Plus, Trash2, Edit3, Save, X, Check, Truck, AlertCircle, User as UserIcon, Mail, Phone, MapPin, ShieldAlert, ShoppingBag, ArrowRight, Upload, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
@@ -10,9 +11,10 @@ import { STORE_CONFIG } from '../config';
 
 export default function AdminDashboard() {
   const { user, profile, isAdmin: isUserAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'inventory' | 'orders'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'orders' | 'settings'>('inventory');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>({ showDeals: true, dealsTitle: STORE_CONFIG.recommendations.title });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Product>>({});
@@ -21,6 +23,8 @@ export default function AdminDashboard() {
     name: '', category: 'Groceries', price: 0, originalPrice: 0, stockQuantity: 0, description: '', imageUrl: '' 
   });
   const [showAddForm, setShowAddForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserAdmin) return;
@@ -35,7 +39,13 @@ export default function AdminDashboard() {
       setOrders(sn.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
     }, (err) => handleFirestoreError(err, OperationType.GET, 'orders'));
 
-    return () => { unsubProducts(); unsubOrders(); };
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (ds) => {
+      if (ds.exists()) {
+        setSettings(ds.data() as StoreSettings);
+      }
+    });
+
+    return () => { unsubProducts(); unsubOrders(); unsubSettings(); };
   }, [isUserAdmin]);
 
   const handleUpdateProduct = async () => {
@@ -71,9 +81,44 @@ export default function AdminDashboard() {
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
+      setStatusUpdating(orderId);
+      // Update local state optimistically for immediate feedback
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      
       await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `orders/${orderId}`);
+    } finally {
+      setStatusUpdating(null);
+    }
+  };
+
+  const updateSettings = async (newSettings: Partial<StoreSettings>) => {
+    try {
+      await setDoc(doc(db, 'settings', 'global'), newSettings, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
+  };
+
+  const handleImageUpload = async (file: File, isEditing: boolean = false) => {
+    if (!file) return;
+    try {
+      setUploading(true);
+      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      
+      if (isEditing) {
+        setEditForm(prev => ({ ...prev, imageUrl: url }));
+      } else {
+        setNewProduct(prev => ({ ...prev, imageUrl: url }));
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -112,6 +157,12 @@ export default function AdminDashboard() {
             className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${activeTab === 'orders' ? 'bg-white shadow-sm text-primary' : 'text-neutral-500 hover:text-neutral-700'}`}
           >
             Store Orders
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${activeTab === 'settings' ? 'bg-white shadow-sm text-primary' : 'text-neutral-500 hover:text-neutral-700'}`}
+          >
+            Config
           </button>
         </div>
       </header>
@@ -204,8 +255,25 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="md:col-span-2 space-y-1">
-                    <label className="text-[9px] font-bold text-neutral-400 uppercase">Image URL (Picsum ID or full URL)</label>
-                    <input type="text" className="admin-input w-full" value={newProduct.imageUrl} onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})} />
+                    <label className="text-[9px] font-bold text-neutral-400 uppercase">Product Image</label>
+                    <div className="flex gap-2">
+                       <input 
+                         type="text" 
+                         placeholder="Image URL"
+                         className="admin-input flex-1" 
+                         value={newProduct.imageUrl} 
+                         onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})} 
+                       />
+                       <label className="bg-accent/20 text-primary border border-accent/30 p-2 rounded cursor-pointer hover:bg-accent/30 transition-all flex items-center justify-center min-w-[36px]">
+                         {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                         <input 
+                           type="file" 
+                           className="hidden" 
+                           accept="image/*" 
+                           onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], false)} 
+                         />
+                       </label>
+                    </div>
                   </div>
                   <div className="md:col-span-4 flex justify-end gap-2 pt-2 border-t border-accent/20">
                     <button onClick={handleAddProduct} className="density-btn-primary !py-2 !px-8">Publish Item</button>
@@ -239,11 +307,22 @@ export default function AdminDashboard() {
                           {isEditing ? (
                             <div className="flex flex-col gap-1 w-full">
                               <label className="text-[8px] font-bold text-neutral-400 uppercase">Product Name</label>
-                              <input 
-                                className="admin-input !bg-white !py-1 w-full" 
-                                value={editForm.name ?? p.name} 
-                                onChange={e => setEditForm({...editForm, name: e.target.value})} 
-                              />
+                              <div className="flex gap-2">
+                                <input 
+                                  className="admin-input !bg-white !py-1 flex-1" 
+                                  value={editForm.name ?? p.name} 
+                                  onChange={e => setEditForm({...editForm, name: e.target.value})} 
+                                />
+                                <label className="bg-accent/20 text-primary border border-accent/30 p-1 rounded cursor-pointer hover:bg-accent/30 transition-all">
+                                  {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*" 
+                                    onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], true)} 
+                                  />
+                                </label>
+                              </div>
                             </div>
                           ) : (
                             <div className="flex flex-col">
@@ -348,7 +427,7 @@ export default function AdminDashboard() {
             </table>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'orders' ? (
         <div className="grid gap-4">
           {orders.map(order => (
             <div key={order.id} className="density-card hover:border-accent/40 transition-all border-l-4 border-l-primary/30">
@@ -362,7 +441,12 @@ export default function AdminDashboard() {
                     <p className="text-[10px] text-neutral-400 uppercase tracking-tighter">{order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString() : 'Just now'}</p>
                   </div>
                 </div>
-                <div className="flex bg-[#F1F3F5] p-0.5 rounded-md border border-neutral-100">
+                <div className="flex bg-[#F1F3F5] p-0.5 rounded-md border border-neutral-100 relative">
+                  {statusUpdating === order.id && (
+                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-md">
+                      <Loader2 size={12} className="animate-spin text-primary" />
+                    </div>
+                  )}
                   {(['pending', 'processing', 'out-for-delivery', 'delivered', 'cancelled'] as OrderStatus[]).map(s => (
                     <button
                       key={s}
@@ -437,6 +521,37 @@ export default function AdminDashboard() {
                <p className="text-xs font-bold uppercase tracking-widest">No active orders</p>
              </div>
           )}
+        </div>
+      ) : (
+        <div className="max-w-md mx-auto space-y-6 animate-in slide-in-from-bottom-4">
+          <div className="density-card">
+            <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-4">Display Configuration</h3>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                 <div className="space-y-1">
+                   <p className="text-[11px] font-bold text-neutral-800">Deals Section</p>
+                   <p className="text-[10px] text-neutral-400 italic">Toggle the "Current Deals" section on Home page.</p>
+                 </div>
+                 <button 
+                   onClick={() => updateSettings({ showDeals: !settings.showDeals })}
+                   className={`w-10 h-6 rounded-full transition-colors relative ${settings.showDeals ? 'bg-success' : 'bg-neutral-200'}`}
+                 >
+                   <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.showDeals ? 'left-5' : 'left-1'}`} />
+                 </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Deals Section Title</label>
+                <input 
+                  type="text" 
+                  className="admin-input w-full" 
+                  value={settings.dealsTitle} 
+                  onBlur={(e) => updateSettings({ dealsTitle: e.target.value })}
+                  onChange={(e) => setSettings({ ...settings, dealsTitle: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

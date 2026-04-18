@@ -3,6 +3,7 @@ import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut 
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types';
+import { ADMIN_EMAILS } from '../config';
 
 interface AuthContextType {
   user: User | null;
@@ -29,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (docSnap.exists()) {
           const data = docSnap.data() as UserProfile;
-          const isAdminEmail = user.email?.toLowerCase() === 'rahil1191@gmail.com';
+          const isAdminEmail = user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
           // Auto-upgrade to admin if email matches
           if (isAdminEmail && data.role !== 'admin') {
             await setDoc(docRef, { ...data, role: 'admin' }, { merge: true });
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           // Create default profile
-          const isAdminEmail = user.email?.toLowerCase() === 'rahil1191@gmail.com';
+          const isAdminEmail = user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
           const newProfile: UserProfile = {
             uid: user.uid,
             email: user.email!,
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => signOut(auth);
 
-  const isAdmin = profile?.role === 'admin' || user?.email?.toLowerCase() === 'rahil1191@gmail.com';
+  const isAdmin = profile?.role === 'admin' || (user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) || false;
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, isAdmin, login, logout }}>

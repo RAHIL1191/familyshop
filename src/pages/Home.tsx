@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { Product } from '../types';
+import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
+import { Product, StoreSettings } from '../types';
 import { useCart } from '../context/CartContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Minus, Search, Tag, Sparkles, TrendingUp } from 'lucide-react';
@@ -10,16 +10,24 @@ import { STORE_CONFIG } from '../config';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>({ showDeals: true, dealsTitle: STORE_CONFIG.recommendations.title });
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const { addToCart, updateQuantity, getItemQuantity } = useCart();
 
   useEffect(() => {
     const q = query(collection(db, 'products'), orderBy('category'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubProducts = onSnapshot(q, (snapshot) => {
       setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
     }, (err) => handleFirestoreError(err, OperationType.GET, 'products'));
-    return unsubscribe;
+
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (ds) => {
+      if (ds.exists()) {
+        setSettings(ds.data() as StoreSettings);
+      }
+    });
+
+    return () => { unsubProducts(); unsubSettings(); };
   }, []);
 
   const dynamicCategories = ['All', ...Array.from(new Set(products.map(p => p.category)))].sort();
@@ -29,17 +37,11 @@ export default function Home() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Recommendations: Items on sale OR random featured items (Memoized to prevent jumping on cart updates)
+  // Recommendations: strictly show ONLY items on sale
   const recommendedItems = useMemo(() => {
-    const saleItems = products.filter(p => p.originalPrice && p.originalPrice > p.price);
-    if (products.length === 0) return [];
-    
-    const base = saleItems.length >= 4 
-      ? saleItems 
-      : [...saleItems, ...products.filter(p => !saleItems.includes(p))];
-      
-    return [...base].sort(() => 0.5 - Math.random()).slice(0, 4);
-  }, [products.length > 0]); // Re-shuffle only when products first load or change significantly
+    const saleItems = products.filter(p => p.originalPrice && p.originalPrice > p.price && p.stockQuantity > 0);
+    return saleItems.sort(() => 0.5 - Math.random()).slice(0, 8); // Show up to 8 sale items
+  }, [products]);
 
   return (
     <div className="space-y-8 pb-12">
@@ -61,11 +63,11 @@ export default function Home() {
       </header>
 
       {/* Featured Recommendations */}
-      {STORE_CONFIG.recommendations.enabled && recommendedItems.length > 0 && !search && category === 'All' && (
+      {settings.showDeals && recommendedItems.length > 0 && !search && category === 'All' && (
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-primary animate-pulse" />
-            <h2 className="text-xs font-black uppercase tracking-tighter text-primary italic">{STORE_CONFIG.recommendations.title}</h2>
+            <h2 className="text-xs font-black uppercase tracking-tighter text-primary italic">{settings.dealsTitle}</h2>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
             {recommendedItems.map(item => {

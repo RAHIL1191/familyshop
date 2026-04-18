@@ -60,4 +60,4 @@ export const STORE_CONFIG = {
   }
 };
 
-export const ADMIN_EMAILS = ['rahil1191@gmail.com'];
+export const ADMIN_EMAILS = ['rahil1191@gmail.com', 'kapateldhaval94@gmail.com'];

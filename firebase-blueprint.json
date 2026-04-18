@@ -47,6 +47,15 @@
         }
       },
       "required": ["userId", "items", "status", "totalAmount", "createdAt", "deliveryAddress"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global store settings.",
+      "type": "object",
+      "properties": {
+        "showDeals": { "type": "boolean", "description": "Toggle the deals/sale section on Home page" },
+        "dealsTitle": { "type": "string", "description": "Title for the deals section" }
+      }
     }
   },
   "firestore": {
@@ -61,6 +70,10 @@
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Customer orders"
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global store configuration"
     }
   }
 }
