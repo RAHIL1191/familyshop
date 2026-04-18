@@ -88,7 +88,6 @@ export default function Home() {
                   <div className="p-3 space-y-2">
                     <div className="flex justify-between items-start gap-2">
                       <h3 className="text-[11px] font-bold text-neutral-800 line-clamp-1">{item.name}</h3>
-                      {inCart > 0 && <span className="w-4 h-4 rounded-full bg-primary text-white text-[8px] flex items-center justify-center font-bold shrink-0">{inCart}</span>}
                     </div>
                     <div className="flex items-center justify-between">
                         <div className="flex flex-col">
@@ -96,13 +95,14 @@ export default function Home() {
                           {!!(item.originalPrice && item.originalPrice > item.price) && <span className="text-[11px] text-neutral-500 line-through font-bold">£{item.originalPrice?.toFixed(2)}</span>}
                         </div>
                         {inCart > 0 ? (
-                          <div className="flex items-center gap-1.5 bg-accent/20 px-1 py-1 rounded-md border border-accent/20">
+                          <div className="flex items-center gap-2 bg-accent/20 px-1 py-1 rounded-md border border-accent/20">
                             <button 
                               onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1); }}
                               className="p-1 hover:text-warning transition-colors"
                             >
                               <Minus size={10} />
                             </button>
+                            <span className="text-[10px] font-black text-primary min-w-[12px] text-center">{inCart}</span>
                             <button 
                               onClick={(e) => { e.stopPropagation(); addToCart(item); }}
                               disabled={inCart >= item.stockQuantity}
@@ -197,7 +197,6 @@ export default function Home() {
                 <div className="flex-1 space-y-1 mb-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[8px] text-primary/60 font-black uppercase tracking-tighter">{product.category}</span>
-                    {inCart > 0 && <span className="w-4 h-4 rounded-full bg-primary text-white text-[8px] flex items-center justify-center font-bold animate-in zoom-in">{inCart}</span>}
                   </div>
                   <h3 className="text-[11px] font-bold text-neutral-900 leading-tight group-hover:text-primary transition-colors">{product.name}</h3>
                   <p className="text-[9px] text-neutral-400 line-clamp-2 leading-relaxed italic">{product.description}</p>
@@ -210,13 +209,14 @@ export default function Home() {
                   </div>
                   
                   {inCart > 0 ? (
-                    <div className="flex items-center gap-1.5 bg-accent/20 px-1 py-1 rounded-md border border-accent/20">
+                    <div className="flex items-center gap-2 bg-accent/20 px-1 py-1 rounded-md border border-accent/20">
                       <button 
                         onClick={(e) => { e.stopPropagation(); updateQuantity(product.id, -1); }}
                         className="p-1 hover:text-warning transition-colors"
                       >
                         <Minus size={12} />
                       </button>
+                      <span className="text-[10px] font-black text-primary min-w-[12px] text-center">{inCart}</span>
                       <button 
                         onClick={(e) => { e.stopPropagation(); addToCart(product); }}
                         disabled={inCart >= product.stockQuantity}

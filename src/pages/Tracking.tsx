@@ -116,9 +116,30 @@ export default function Tracking() {
                   <span className="font-mono italic">£{(item.price * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
-              <div className="pt-2 border-t border-neutral-50 flex justify-between font-extrabold text-xs italic text-primary">
-                <span>Total Paid</span>
-                <span className="font-mono">£{(order.totalAmount + 2.5).toFixed(2)}</span>
+              
+              <div className="pt-2 border-t border-neutral-50 space-y-1">
+                {(() => {
+                  const subtotal = order.items.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+                  const fee = order.totalAmount - subtotal;
+                  return (
+                    <>
+                      <div className="flex justify-between text-[10px] text-neutral-400 font-medium italic">
+                        <span>Items Subtotal</span>
+                        <span className="font-mono">£{subtotal.toFixed(2)}</span>
+                      </div>
+                      {fee > 0 && (
+                        <div className="flex justify-between text-[10px] text-neutral-400 font-medium italic">
+                          <span>Delivery Fee</span>
+                          <span className="font-mono">£{fee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-extrabold text-xs italic text-primary pt-1">
+                        <span>Total Paid</span>
+                        <span className="font-mono">£{order.totalAmount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>

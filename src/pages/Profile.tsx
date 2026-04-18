@@ -12,6 +12,22 @@ export default function Profile() {
   const { user, profile, login, logout, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const handleLogin = async () => {
+    try {
+      setLoginError(null);
+      await login();
+    } catch (error: any) {
+      if (error.code === 'auth/unauthorized-domain') {
+        setLoginError("This domain is not authorized in Firebase Console. Please add your Cloudflare domain to 'Authorized Domains' in Firebase Authentication settings.");
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setLoginError("Login popup was closed before completing.");
+      } else {
+        setLoginError(error.message || "An unexpected error occurred during login.");
+      }
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -54,8 +70,16 @@ export default function Profile() {
               : 'Sign in to access the store management dashboard. Customer guest checkout is enabled.'}
           </p>
         </div>
+        
+        {loginError && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-left">
+            <p className="text-xs text-red-600 font-bold uppercase tracking-tight mb-1">Login Error</p>
+            <p className="text-[11px] text-red-500 leading-relaxed font-medium">{loginError}</p>
+          </div>
+        )}
+
         <button
-          onClick={login}
+          onClick={handleLogin}
           className="w-full density-btn-primary py-4 flex items-center justify-center gap-3 shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
           <LogIn size={20} />
