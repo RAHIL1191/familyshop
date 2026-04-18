@@ -24,6 +24,26 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const authRequired = !STORE_CONFIG.auth.allowGuestCheckout && !user;
+
+  // Enforce login if guest checkout is disabled
+  if (authRequired) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
+        <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-400">
+          <UserIcon size={40} />
+        </div>
+        <h2 className="text-2xl font-bold">Sign in to checkout</h2>
+        <p className="text-neutral-500">You need to be logged in to place an order.</p>
+        <button 
+          onClick={() => navigate('/profile')} 
+          className="bg-primary text-white px-6 py-2 rounded-md font-bold hover:bg-secondary transition-colors"
+        >
+          Go to Login
+        </button>
+      </div>
+    );
+  }
 
   // Postcode validation using config
   const validateKentPostcode = (pc: string) => {

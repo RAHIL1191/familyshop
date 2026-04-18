@@ -77,8 +77,13 @@ export default function Home() {
                       SALE
                     </div>
                   )}
-                  <div className="aspect-video bg-neutral-100 overflow-hidden">
+                  <div className="aspect-video bg-neutral-100 overflow-hidden relative">
                     <img src={item.imageUrl || `https://picsum.photos/seed/${item.name}/400/225`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
+                    {item.stockQuantity === 0 && (
+                      <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                        <span className="text-[9px] font-black text-warning border border-warning px-2 py-0.5 rotate-[-5deg] uppercase tracking-widest bg-white/90">Sold Out</span>
+                      </div>
+                    )}
                   </div>
                   <div className="p-3 space-y-2">
                     <div className="flex justify-between items-start gap-2">

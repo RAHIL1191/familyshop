@@ -36,6 +36,13 @@ export const STORE_CONFIG = {
     postcodeRequired: true // Always recommended
   },
 
+  // Auth & Checkout Settings
+  auth: {
+    allowGuestCheckout: true,  // If true, user doesn't need to log in to order
+    requireLogin: false,       // If true, login page is shown to everyone
+    showCustomerLogin: false   // If false, nav hides login links (Admin can still access /profile to log in)
+  },
+
   // Notification Switches
   notifications: {
     sendEmail: true,

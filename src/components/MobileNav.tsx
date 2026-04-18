@@ -35,12 +35,14 @@ export default function MobileNav() {
           <span>Cart</span>
         </Link>
 
-        <Link to="/profile" className={`tab-bar-item ${isActive('/profile') ? 'active' : ''}`}>
-          <div className="mobile-touch-target">
-            <UserIcon size={20} />
-          </div>
-          <span>Account</span>
-        </Link>
+        {(user || STORE_CONFIG.auth.showCustomerLogin) && (
+          <Link to="/profile" className={`tab-bar-item ${isActive('/profile') ? 'active' : ''}`}>
+            <div className="mobile-touch-target">
+              <UserIcon size={20} />
+            </div>
+            <span>Account</span>
+          </Link>
+        )}
 
         {isAdmin && (
           <Link to="/admin" className={`tab-bar-item ${isActive('/admin') ? 'active' : ''}`}>

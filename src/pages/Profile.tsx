@@ -6,6 +6,7 @@ import { Order } from '../types';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Package, Clock, LogOut, LogIn, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
+import { STORE_CONFIG } from '../config';
 
 export default function Profile() {
   const { user, profile, login, logout, loading: authLoading } = useAuth();
@@ -44,9 +45,13 @@ export default function Profile() {
           <ShoppingBag size={40} />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-black uppercase tracking-tight italic">Welcome to Family Store</h1>
+          <h1 className="text-2xl font-black uppercase tracking-tight italic">
+            {STORE_CONFIG.auth.showCustomerLogin ? 'Welcome to Family Store' : 'Administrator Portal'}
+          </h1>
           <p className="text-xs text-neutral-500 font-medium leading-relaxed italic">
-            Sign in to track your orders, save delivery addresses, and unlock exclusive rewards.
+            {STORE_CONFIG.auth.showCustomerLogin 
+              ? 'Sign in to track your orders, save delivery addresses, and unlock exclusive rewards.'
+              : 'Sign in to access the store management dashboard. Customer guest checkout is enabled.'}
           </p>
         </div>
         <button

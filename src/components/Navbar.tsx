@@ -35,9 +35,11 @@ export default function Navbar() {
                     <LayoutDashboard size={18} />
                   </Link>
                 )}
-                <Link to="/profile" className="p-2 text-white/80 hover:text-white transition-colors" title="Profile">
-                  <UserIcon size={18} />
-                </Link>
+                {(profile?.role === 'admin' || STORE_CONFIG.auth.showCustomerLogin) && (
+                  <Link to="/profile" className="p-2 text-white/80 hover:text-white transition-colors" title="Profile">
+                    <UserIcon size={18} />
+                  </Link>
+                )}
                 <button
                   onClick={() => logout()}
                   className="p-2 text-white/60 hover:text-warning transition-colors"
@@ -45,14 +47,14 @@ export default function Navbar() {
                   <LogOut size={18} />
                 </button>
               </div>
-            ) : (
+            ) : STORE_CONFIG.auth.showCustomerLogin ? (
               <button
                 onClick={() => login()}
                 className="bg-accent text-primary px-3 py-1.5 rounded-md text-xs font-bold hover:bg-white transition-colors"
               >
                 Sign In
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

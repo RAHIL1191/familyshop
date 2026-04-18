@@ -26,6 +26,9 @@ export async function onRequestPost(context: any) {
       </tr>`
     ).join('');
 
+    const subtotal = (order.items || []).reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+    const deliveryFee = order.totalAmount - subtotal;
+
     const htmlTemplate = (title: string, intro: string) => `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; color: #333;">
         <div style="background-color: #1a1a1a; padding: 30px; text-align: center; color: white;">
@@ -53,6 +56,14 @@ export async function onRequestPost(context: any) {
               ${orderDetails}
             </tbody>
             <tfoot>
+              <tr>
+                <td colspan="2" style="padding: 10px 10px 0; text-align: right; color: #999;">Subtotal</td>
+                <td style="padding: 10px 10px 0; text-align: right;">£${subtotal.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding: 5px 10px; text-align: right; color: #999;">Delivery</td>
+                <td style="padding: 5px 10px; text-align: right;">${deliveryFee > 0 ? `£${deliveryFee.toFixed(2)}` : 'FREE'}</td>
+              </tr>
               <tr>
                 <td colspan="2" style="padding: 15px 10px; text-align: right; font-weight: bold;">Grand Total</td>
                 <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 18px; color: #1a1a1a;">£${order.totalAmount.toFixed(2)}</td>
